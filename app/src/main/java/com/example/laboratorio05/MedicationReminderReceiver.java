@@ -58,10 +58,8 @@ public class MedicationReminderReceiver extends BroadcastReceiver{
                 .setDefaults(NotificationCompat.DEFAULT_SOUND)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER);
 
-        // Mostrar notificación
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(context);
 
-        // Verificar permisos antes de mostrar (Android 13+)
         if (ActivityCompat.checkSelfPermission(context, POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             int notificationId = generateNotificationId(nombre);
             notificationManager.notify(notificationId, builder.build());
@@ -147,7 +145,6 @@ public class MedicationReminderReceiver extends BroadcastReceiver{
         }
     }
 
-    // Crear acción sugerida según tipo y dosis
     private String getActionByMedicationType(String tipo, String dosis) {
         if (tipo == null || dosis == null) return "Tomar medicamento";
 

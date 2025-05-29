@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Objects;
 
 public class Medication {
     private String name;
@@ -15,10 +14,8 @@ public class Medication {
     private String startDate;
     private String startTime;
 
-    // Constructor vacío necesario para Gson (deserialización desde JSON)
     public Medication() {}
 
-    // Constructor completo
     public Medication(String name, String type, String dose, int frequencyHours,
                       String startDate, String startTime) {
         this.name = name;
@@ -79,7 +76,6 @@ public class Medication {
         this.startTime = startTime;
     }
 
-    // Método para obtener el texto de la acción sugerida para notificaciones
     public String getSuggestedAction() {
         switch (type.toLowerCase()) {
             case "pastilla":
@@ -96,7 +92,6 @@ public class Medication {
         }
     }
 
-    // Método para obtener el canal de notificación según el tipo
     public String getNotificationChannel() {
         switch (type.toLowerCase()) {
             case "pastilla":
@@ -113,11 +108,10 @@ public class Medication {
         }
     }
 
-    // Método para obtener el icono según el tipo de medicamento
     public int getNotificationIcon() {
         switch (type.toLowerCase()) {
             case "pastilla":
-                return R.drawable.ic_pill; // Reemplazar con tus iconos
+                return R.drawable.ic_pill;
             case "jarabe":
                 return R.drawable.ic_syrup;
             case "ampolla":
@@ -130,22 +124,18 @@ public class Medication {
         }
     }
 
-    // Método para generar un ID único de notificación
     public int getNotificationId() {
         return (name + type).hashCode();
     }
 
-    // Método para obtener la información completa del medicamento (para mostrar en RecyclerView)
     public String getFullInfo() {
         return name + " - " + type + " (" + dose + ") - Cada " + frequencyHours + " horas";
     }
 
-    // Método para obtener fecha y hora de inicio completas
     public String getStartDateTime() {
         return startDate + " " + startTime;
     }
 
-    // Método para obtener el próximo tiempo de notificación (en milisegundos)
     public long getNextNotificationTime() {
         try {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
@@ -172,7 +162,6 @@ public class Medication {
         return System.currentTimeMillis();
     }
 
-    // Método toString para debugging
     @Override
     public String toString() {
         return "Medication{" +
@@ -185,7 +174,6 @@ public class Medication {
                 '}';
     }
 
-    // Método equals para comparar medicamentos
     @Override
     public boolean equals(Object obj) {
         if (this == obj) return true;
@@ -200,7 +188,6 @@ public class Medication {
                 Objects.equals(startTime, that.startTime);
     }
 
-    // Método hashCode
     @Override
     public int hashCode() {
         return Objects.hash(name, type, dose, frequencyHours, startDate, startTime);

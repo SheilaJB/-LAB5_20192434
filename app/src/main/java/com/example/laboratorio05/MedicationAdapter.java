@@ -76,7 +76,7 @@ public class MedicationAdapter extends RecyclerView.Adapter<MedicationAdapter.Me
         }
 
         private void setMedicationIcon(String type) {
-            int iconResource = R.drawable.ic_pill; // Default icon
+            int iconResource = R.drawable.ic_pill;
 
             switch (type.toLowerCase()) {
                 case "pastilla":

@@ -43,8 +43,9 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import static android.Manifest.permission.POST_NOTIFICATIONS;
+import android.app.AlarmManager;
+import android.content.Context;
 public class MainActivity extends AppCompatActivity {
-
     private TextView tvGreeting;
     private TextView tvMotivationalMessage;
     private ImageView ivProfileImage;
@@ -57,7 +58,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String KEY_PROFILE_IMAGE_URI = "profile_image_uri";
     private static final String KEY_IS_FIRST_TIME = "is_first_time";
     private ActivityResultLauncher<Intent> imagePickerLauncher;
-
+    private static final String KEY_MOTIVATIONAL_FREQUENCY = "motivational_frequency";
+    private static final int MOTIVATIONAL_RECEIVER_ID = 1000;
 
     private static final String CHANNEL_PASTILLA = "channel_pastilla";
     private static final String CHANNEL_JARABE = "channel_jarabe";
@@ -77,10 +79,135 @@ public class MainActivity extends AppCompatActivity {
         checkFirstTimeAndSetupGreeting();
         loadSavedData();
         setupClickListeners();
+        loadMotivationalConfiguration();
+        handleConfigurationActions(getIntent());
+    }
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleConfigurationActions(intent);
+    }
+
+    private void handleConfigurationActions(Intent intent) {
+        if (intent != null && intent.hasExtra("action")) {
+            String action = intent.getStringExtra("action");
+
+            switch (action) {
+                case "program_motivational":
+                    int frequency = intent.getIntExtra("frequency", 0);
+                    if (frequency > 0) {
+                        programarNotificacionesMotivacionales(frequency);
+                        Toast.makeText(this, "✅ Notificaciones programadas cada " + frequency + " horas",
+                                Toast.LENGTH_LONG).show();
+                    }
+                    break;
+
+                case "test_motivational":
+                    lanzarNotificacionMotivacional();
+                    Toast.makeText(this, "🔔 Notificación de prueba enviada", Toast.LENGTH_SHORT).show();
+                    break;
+
+                case "stop_motivational":
+                    cancelarNotificacionesMotivacionales();
+                    Toast.makeText(this, "❌ Notificaciones motivacionales detenidas", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    }
+    public void programarNotificacionesMotivacionales(int frecuenciaHoras) {
+        if (frecuenciaHoras <= 0) {
+            Log.w("MainActivity", "Frecuencia inválida para notificaciones motivacionales");
+            return;
+        }
+        cancelarNotificacionesMotivacionales();
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, MotivationalReminderReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                MOTIVATIONAL_RECEIVER_ID,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.MINUTE, 1);
+        calendar.add(Calendar.HOUR_OF_DAY, frecuenciaHoras);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        long firstNotificationTime = calendar.getTimeInMillis();
+        long intervalMillis = frecuenciaHoras * 60 * 60 * 1000L;
+
+        try {
+            // Programar notificación repetitiva
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // Para testing: usar setExactAndAllowWhileIdle sin repetición
+                alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        firstNotificationTime,
+                        pendingIntent
+                );
+                alarmManager.setRepeating(
+                        AlarmManager.RTC_WAKEUP,
+                        firstNotificationTime,
+                        intervalMillis,
+                        pendingIntent
+                );
+            } else {
+                alarmManager.setRepeating(
+                        AlarmManager.RTC_WAKEUP,
+                        firstNotificationTime,
+                        intervalMillis,
+                        pendingIntent
+                );
+            }
+
+            // Guardar frecuencia configurada
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putInt(KEY_MOTIVATIONAL_FREQUENCY, frecuenciaHoras);
+            editor.apply();
+
+            Log.d("MainActivity", "Notificaciones motivacionales programadas cada " + frecuenciaHoras + " horas");
+
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error al programar notificaciones motivacionales: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public void cancelarNotificacionesMotivacionales() {
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+
+        Intent intent = new Intent(this, MotivationalReminderReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                MOTIVATIONAL_RECEIVER_ID,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        alarmManager.cancel(pendingIntent);
+
+        // Limpiar frecuencia guardada
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.remove(KEY_MOTIVATIONAL_FREQUENCY);
+        editor.apply();
+
+        Log.d("MainActivity", "Notificaciones motivacionales canceladas");
+    }
+
+    private void loadMotivationalConfiguration() {
+        int frecuenciaGuardada = sharedPreferences.getInt(KEY_MOTIVATIONAL_FREQUENCY, 0);
+        if (frecuenciaGuardada > 0) {
+            // Reprogramar notificaciones motivacionales si estaban configuradas
+            programarNotificacionesMotivacionales(frecuenciaGuardada);
+            Log.d("MainActivity", "Configuración motivacional cargada: cada " + frecuenciaGuardada + " horas");
+        }
     }
 
     public void createNotificationChannels() {
-        // Solo para Android >= API 26
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
 
             // Canal para Pastillas
@@ -135,13 +262,11 @@ public class MainActivity extends AppCompatActivity {
             notificationManager.createNotificationChannel(channelCapsula);
             notificationManager.createNotificationChannel(channelMotivacional);
 
-            // Pedir permisos para Android 13+
             askPermission();
         }
     }
 
     public void askPermission() {
-        // Solo para Android >= API 33 (Android 13)
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ActivityCompat.checkSelfPermission(this, POST_NOTIFICATIONS) == PackageManager.PERMISSION_DENIED) {
 
@@ -169,7 +294,6 @@ public class MainActivity extends AppCompatActivity {
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true);
 
-        // Lanzar notificación
         NotificationManagerCompat notificationManager = NotificationManagerCompat.from(this);
         if (ActivityCompat.checkSelfPermission(this, POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
             notificationManager.notify(generateNotificationId(), builder.build());
@@ -197,7 +321,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    // MÉTODOS AUXILIARES
+
     private String getChannelByMedicationType(String tipo) {
         switch (tipo.toLowerCase()) {
             case "pastilla":

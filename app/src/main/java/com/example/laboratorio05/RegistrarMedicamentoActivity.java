@@ -238,7 +238,6 @@ public class RegistrarMedicamentoActivity extends AppCompatActivity {
 
         Medication medication = new Medication(name, type, dose, frequency, startDate, startTime);
 
-        // Guardar en SharedPreferences
         saveMedicationToPreferences(medication);
 
         scheduleNotificationsForMedication(medication);
@@ -272,7 +271,6 @@ public class RegistrarMedicamentoActivity extends AppCompatActivity {
         );
 
         try {
-            // Programar la primera alarma
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
@@ -298,13 +296,10 @@ public class RegistrarMedicamentoActivity extends AppCompatActivity {
     }
 
     private void saveMedicationToPreferences(Medication newMedication) {
-        // Cargar lista existente
         List<Medication> medicationList = loadMedicationsFromPreferences();
 
-        // Agregar nuevo medicamento
         medicationList.add(newMedication);
 
-        // Convertir a JSON y guardar
         Gson gson = new Gson();
         String medicationsJson = gson.toJson(medicationList);
 
